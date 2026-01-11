@@ -106,13 +106,13 @@ impl Span {
         // Calculate how many characters to underline
         let underline_len = snippet.chars().count().max(1);
 
+        let line = format!("{line}");
+        line.len();
+
         format!(
-            "Error at line {}, column {}: {}\n  |\n{} | {}\n  | {}{}\n",
-            line,
-            col,
-            error_msg,
-            line,
-            error_line,
+            "Error at line {line}, column {col}: {error_msg}\n{} |\n{line} | {error_line}\n{} | {}{}\n",
+            " ".repeat(line.len()),
+            " ".repeat(line.len()),
             " ".repeat(col - 1),
             "^".repeat(underline_len)
         )
