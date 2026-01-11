@@ -527,7 +527,7 @@ impl Iterator for Lexer<'_> {
             match self.next_token() {
                 Ok(Some(TokenSpan {
                     token: Token::Eof,
-                    span,
+                    span: _,
                 })) => return None,
                 Ok(Some(token)) => return Some(Ok(token)),
                 Ok(None) => continue,

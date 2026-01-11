@@ -42,7 +42,7 @@ fn main() -> Result<()> {
                 bail!("Specified path does not exist!");
             }
 
-            let source = fs::read_to_string(input)?;
+            let source = fs::read_to_string(&input)?;
 
             let lexer = Lexer::new(&source).into_iter();
 
@@ -67,7 +67,7 @@ fn main() -> Result<()> {
                         LexerError::InvalidOffset(span, _) => span,
                     };
 
-                    eprintln!("{}", span.format_error(&source, &err.to_string()));
+                    eprintln!("{}", span.format_error(&input, &source, &err.to_string()));
                 }
                 bail!("Compilation failed");
             }

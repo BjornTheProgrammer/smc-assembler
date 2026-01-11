@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use arbitrary_int::{i4, u4, u10};
 
 pub type Register = u4;
@@ -98,7 +100,7 @@ impl Span {
     }
 
     /// Format an error with context from the source code
-    pub fn format_error(&self, source: &str, error_msg: &str) -> String {
+    pub fn format_error<P: AsRef<Path>>(&self, file: P, source: &str, error_msg: &str) -> String {
         let (line, col) = self.location(source);
         let error_line = self.get_line(source);
         let snippet = self.snippet(source);
@@ -107,14 +109,17 @@ impl Span {
         let underline_len = snippet.chars().count().max(1);
 
         let line = format!("{line}");
-        line.len();
+
+        let file = file.as_ref().display();
 
         format!(
-            "Error at line {line}, column {col}: {error_msg}\n{} |\n{line} | {error_line}\n{} | {}{}\n",
+            "{} --> {file}:{line}:{col}\n{} |\n{line} | {error_line}\n{} | {}{}\n{} | {error_msg}\n",
+            " ".repeat(line.len()),
             " ".repeat(line.len()),
             " ".repeat(line.len()),
             " ".repeat(col - 1),
-            "^".repeat(underline_len)
+            "^".repeat(underline_len),
+            " ".repeat(line.len()),
         )
     }
 }
