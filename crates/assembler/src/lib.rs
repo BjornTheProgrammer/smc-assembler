@@ -1,19 +1,16 @@
-use std::{
-    fmt::Write as _,
-    fs::{self, OpenOptions},
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::{fmt::Write as _, fs, path::Path};
 
 use crate::{
     assembler::{Assembler, AssemblerError},
     lexer::{Lexer, LexerError},
     parser::{Parser, ParserError},
+    save::save_file,
 };
 
 pub mod assembler;
 pub mod lexer;
 pub mod parser;
+pub mod save;
 
 #[derive(thiserror::Error, Debug)]
 pub enum CompileError {
@@ -27,36 +24,23 @@ pub enum CompileError {
     AssembleError(Vec<AssemblerError>, String),
     #[error("Compilation failed")]
     CompilationFailed,
+    #[error("Schematic save failed")]
+    SchematicSaveFailed(#[from] mc_schem::Error),
 }
 
-pub fn compile_to_file(
-    input: &str,
-    output: &str,
+pub fn compile_to_file<P1: AsRef<Path>, P2: AsRef<Path>>(
+    input: P1,
+    output: P2,
     debug_artifacts: bool,
 ) -> Result<(), CompileError> {
+    let input = input.as_ref();
+    let output = output.as_ref();
+
     let result = compile(input, debug_artifacts);
 
     match result {
         Ok(result) => {
-            let mut file = OpenOptions::new()
-                .create(true)
-                .truncate(true)
-                .write(true)
-                .open(&output)
-                .map_err(|err| CompileError::WriteFileError(err))?;
-
-            let output = PathBuf::from(output);
-            let bytes = result
-                .into_iter()
-                .map(|word| word.to_be_bytes())
-                .collect::<Vec<_>>();
-
-            for byte in bytes {
-                let byte1 = byte[0];
-                let byte2 = byte[1];
-                writeln!(file, "{:08b}{:08b}", byte1, byte2)
-                    .map_err(|err| CompileError::WriteFileError(err))?;
-            }
+            save_file(output, result)?;
 
             println!("Output written to: {}", output.display());
             return Ok(());
