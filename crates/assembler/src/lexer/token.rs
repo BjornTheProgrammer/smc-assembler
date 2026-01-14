@@ -1,35 +1,6 @@
 use std::path::Path;
 
-use arbitrary_int::{i4, u4, u10};
-
-pub type Register = u4;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum OffsetOrSymbol {
-    Offset(i4),
-    Symbol(String),
-    NotPresent,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum ImmediateOrSymbol {
-    Immediate(i8),
-    Symbol(String),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum AddressOrSymbol {
-    Address(u10),
-    Symbol(String),
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Condition {
-    Equal,
-    NotEqual,
-    GreaterEqual,
-    Less,
-}
+use arbitrary_int::u4;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct TokenSpan {
@@ -51,6 +22,13 @@ pub struct Span {
 
 impl Span {
     pub fn new(start: usize, end: usize) -> Self {
+        debug_assert!(
+            start <= end,
+            "Invalid span: start ({}) must be <= end ({})",
+            start,
+            end
+        );
+
         Span { start, end }
     }
 
@@ -124,37 +102,62 @@ impl Span {
     }
 }
 
+pub type Register = u4;
+
 #[derive(Debug, PartialEq, Clone)]
-pub enum Token {
-    // Operations
+pub enum Condition {
+    Equal,
+    NotEqual,
+    GreaterEqual,
+    Less,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum LoweredOperation {
     Nop,
     Hlt,
-    Add(Register, Register, Register),
-    Sub(Register, Register, Register),
-    Nor(Register, Register, Register),
-    And(Register, Register, Register),
-    Xor(Register, Register, Register),
-    Rsh(Register, Register),
-    Ldi(Register, ImmediateOrSymbol),
-    Adi(Register, ImmediateOrSymbol),
-    Jmp(AddressOrSymbol),
-    Brh(Condition, AddressOrSymbol),
-    Cal(AddressOrSymbol),
+    Add,
+    Sub,
+    Nor,
+    And,
+    Xor,
+    Rsh,
+    Ldi,
+    Adi,
+    Jmp,
+    Brh,
+    Cal,
     Ret,
-    Lod(Register, Register, OffsetOrSymbol),
-    Str(Register, Register, OffsetOrSymbol),
+    Lod,
+    Str,
+}
 
-    // Psudeo Operations
-    Cmp(Register, Register), // CMP A B -> SUB A B r0
-    Mov(Register, Register), // MOV A C -> ADD A r0 C
-    Lsh(Register, Register), // LSH A C -> ADD A A C
-    Inc(Register),           // INC A -> ADI A 1
-    Dec(Register),           // DEC A -> ADI A -1
-    Not(Register, Register), // NOT A C -> NOR A r0 C
-    Neg(Register, Register), // NEG A C -> SUB r0 A C
+#[derive(Debug, PartialEq, Clone)]
+pub enum PseudoOperation {
+    Cmp,
+    Mov,
+    Lsh,
+    Inc,
+    Dec,
+    Not,
+    Neg,
+}
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum Keyword {
+    LoweredOperation(LoweredOperation),
+    PseudoOperation(PseudoOperation),
+    Register(Register),
+    Condition(Condition),
+    Define,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Token {
+    Keyword(Keyword),
     Label(String),
-    Define(String, f32),
-
+    Identifier(String),
+    Number(f32),
+    Comma,
     Eof,
 }

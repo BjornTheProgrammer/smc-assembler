@@ -1,0 +1,381 @@
+use std::str::FromStr;
+
+use crate::lexer::token::{
+    Condition, Keyword, LoweredOperation, PseudoOperation, Register, Span, Token, TokenSpan,
+};
+use anyhow::Result;
+use smc_macros::match_keywords;
+use thiserror::Error;
+
+pub mod token;
+
+pub struct Lexer<'a> {
+    input: &'a [u8],
+    pos: usize,
+    finished: bool,
+}
+
+#[derive(Error, Debug, Clone)]
+pub enum LexerError {
+    #[error("Invalid number `{1}`")]
+    InvalidNumber(Span, String),
+
+    #[error("Unexpected character `{1}`")]
+    UnexpectedCharacter(Span, char),
+
+    #[error("Expected character `{1}`")]
+    ExpectedCharacter(Span, char),
+
+    #[error("Unknown condition `{1}`")]
+    UnknownCondition(Span, String),
+
+    #[error("Invalid offset `{1}`")]
+    InvalidOffset(Span, String),
+}
+
+impl<'a> Lexer<'a> {
+    pub fn new(input: &'a str) -> Self {
+        Self {
+            input: input.as_bytes(),
+            pos: 0,
+            finished: false,
+        }
+    }
+
+    /// Peek at the next byte without consuming
+    fn peek(&self, amount: usize) -> Option<u8> {
+        self.input.get(self.pos + amount).copied()
+    }
+
+    /// Consume and return the next byte
+    fn advance(&mut self) -> Option<u8> {
+        let res = self.peek(0);
+        if res.is_some() {
+            self.pos += 1;
+        }
+        res
+    }
+
+    fn skip_whitespace(&mut self) -> bool {
+        let mut whitespace_exists = false;
+        while let Some(b) = self.peek(0) {
+            if b.is_ascii_whitespace() {
+                whitespace_exists = true;
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
+        return whitespace_exists;
+    }
+
+    pub fn read_identifier(&mut self) -> String {
+        let mut identifier = String::new();
+        while let Some(b) = self.peek(0) {
+            if b.is_ascii_alphanumeric() || b == b'_' {
+                identifier.push(b as char);
+                self.advance();
+            } else {
+                break;
+            }
+        }
+        identifier
+    }
+
+    fn skip_comments(&mut self) {
+        while self.peek(0) == Some(b'#') {
+            while let Some(b) = self.peek(0) {
+                self.advance();
+                if b == b'\n' {
+                    break;
+                }
+            }
+            self.skip_whitespace();
+        }
+    }
+
+    pub fn next_token(&mut self) -> Result<TokenSpan, LexerError> {
+        self.skip_whitespace();
+        self.skip_comments();
+
+        let start = self.pos;
+
+        let keyword: Option<_> = match_keywords!(
+            "Nop" => Keyword::LoweredOperation(LoweredOperation::Nop),
+            "Hlt" => Keyword::LoweredOperation(LoweredOperation::Hlt),
+            "Add" => Keyword::LoweredOperation(LoweredOperation::Add),
+            "Sub" => Keyword::LoweredOperation(LoweredOperation::Sub),
+            "Nor" => Keyword::LoweredOperation(LoweredOperation::Nor),
+            "And" => Keyword::LoweredOperation(LoweredOperation::And),
+            "Xor" => Keyword::LoweredOperation(LoweredOperation::Xor),
+            "Rsh" => Keyword::LoweredOperation(LoweredOperation::Rsh),
+            "Ldi" => Keyword::LoweredOperation(LoweredOperation::Ldi),
+            "Adi" => Keyword::LoweredOperation(LoweredOperation::Adi),
+            "Jmp" => Keyword::LoweredOperation(LoweredOperation::Jmp),
+            "Brh" => Keyword::LoweredOperation(LoweredOperation::Brh),
+            "Cal" => Keyword::LoweredOperation(LoweredOperation::Cal),
+            "Ret" => Keyword::LoweredOperation(LoweredOperation::Ret),
+            "Lod" => Keyword::LoweredOperation(LoweredOperation::Lod),
+            "Str" => Keyword::LoweredOperation(LoweredOperation::Str),
+
+            "Cmp" => Keyword::PseudoOperation(PseudoOperation::Cmp),
+            "Mov" => Keyword::PseudoOperation(PseudoOperation::Mov),
+            "Lsh" => Keyword::PseudoOperation(PseudoOperation::Lsh),
+            "Inc" => Keyword::PseudoOperation(PseudoOperation::Inc),
+            "Dec" => Keyword::PseudoOperation(PseudoOperation::Dec),
+            "Not" => Keyword::PseudoOperation(PseudoOperation::Not),
+            "Neg" => Keyword::PseudoOperation(PseudoOperation::Neg),
+
+            "eq" => Keyword::Condition(Condition::Equal),
+            "ne" => Keyword::Condition(Condition::NotEqual),
+            "ge" => Keyword::Condition(Condition::GreaterEqual),
+            "lt" => Keyword::Condition(Condition::Less),
+
+            "=" => Keyword::Condition(Condition::Equal),
+            "!=" => Keyword::Condition(Condition::NotEqual),
+            ">=" => Keyword::Condition(Condition::GreaterEqual),
+            "<" => Keyword::Condition(Condition::Less),
+
+            "z" => Keyword::Condition(Condition::Equal),
+            "nz" => Keyword::Condition(Condition::NotEqual),
+            "c" => Keyword::Condition(Condition::GreaterEqual),
+            "nc" => Keyword::Condition(Condition::Less),
+
+            "zero" => Keyword::Condition(Condition::Equal),
+            "notzero" => Keyword::Condition(Condition::NotEqual),
+            "carry" => Keyword::Condition(Condition::GreaterEqual),
+            "notcarry" => Keyword::Condition(Condition::Less),
+
+            "r0" => Keyword::Register(Register::from_u8(0)),
+            "r1" => Keyword::Register(Register::from_u8(1)),
+            "r2" => Keyword::Register(Register::from_u8(2)),
+            "r3" => Keyword::Register(Register::from_u8(3)),
+            "r4" => Keyword::Register(Register::from_u8(4)),
+            "r5" => Keyword::Register(Register::from_u8(5)),
+            "r6" => Keyword::Register(Register::from_u8(6)),
+            "r7" => Keyword::Register(Register::from_u8(7)),
+            "r8" => Keyword::Register(Register::from_u8(8)),
+            "r9" => Keyword::Register(Register::from_u8(9)),
+            "r10" => Keyword::Register(Register::from_u8(10)),
+            "r11" => Keyword::Register(Register::from_u8(11)),
+            "r12" => Keyword::Register(Register::from_u8(12)),
+            "r13" => Keyword::Register(Register::from_u8(13)),
+            "r14" => Keyword::Register(Register::from_u8(14)),
+            "r15" => Keyword::Register(Register::from_u8(15)),
+
+            "define" => Keyword::Define,
+        );
+
+        let token = match keyword {
+            Some((size, keyword)) => {
+                for _ in 0..size {
+                    self.advance();
+                }
+
+                TokenSpan::new(Token::Keyword(keyword), Span::new(start, start + size))
+            }
+            None => match self.advance() {
+                Some(b'\'' | b'"') => match self.peek(1) {
+                    Some(b'\'' | b'"') => {
+                        let token = TokenSpan::new(
+                        Token::Number(self.advance().expect("Should be impossible for a character to not exist after checking for the character after") as f32),
+                            Span::new(start, self.pos),
+                        );
+
+                        self.advance();
+
+                        token
+                    }
+                    Some(_) | None => {
+                        let original_char = self.peek(0).unwrap();
+                        self.advance();
+                        self.advance();
+                        return Err(LexerError::ExpectedCharacter(
+                            Span::new(start, self.pos),
+                            original_char as char,
+                        ));
+                    }
+                },
+                Some(b'.') => TokenSpan::new(
+                    Token::Label(self.read_identifier()),
+                    Span::new(start, self.pos),
+                ),
+                Some(b'0'..=b'9') | Some(b'-') => {
+                    self.pos -= 1;
+                    let value: f32 = self.read_number()?;
+                    TokenSpan::new(Token::Number(value), Span::new(start, self.pos))
+                }
+                None => TokenSpan {
+                    token: Token::Eof,
+                    span: Span::new(self.pos, self.pos),
+                },
+                Some(b'a'..=b'z') | Some(b'A'..=b'Z') => {
+                    self.pos -= 1;
+                    TokenSpan::new(
+                        Token::Identifier(self.read_identifier()),
+                        Span::new(start, self.pos),
+                    )
+                }
+                Some(b',') => TokenSpan::new(Token::Comma, Span::new(start, self.pos)),
+                Some(c) => {
+                    return Err(LexerError::UnexpectedCharacter(
+                        Span::new(start, self.pos),
+                        c as char,
+                    ));
+                }
+            },
+        };
+        Ok(token)
+    }
+
+    fn read_number<N: FromStr>(&mut self) -> Result<N, LexerError> {
+        self.skip_whitespace();
+        let start = self.pos;
+
+        // Check for binary prefix (0b)
+        if self.peek(0) == Some(b'0') && matches!(self.peek(1), Some(b'b') | Some(b'B')) {
+            self.advance(); // consume '0'
+            self.advance(); // consume 'b'
+
+            let binary_start = self.pos;
+            while let Some(c) = self.peek(0) {
+                if c == b'0' || c == b'1' || c == b'_' {
+                    self.advance();
+                } else {
+                    break;
+                }
+            }
+
+            let slice: String = self.input[binary_start..self.pos]
+                .iter()
+                .filter(|&&b| b != b'_')
+                .map(|&b| b as char)
+                .collect();
+
+            if slice.is_empty() {
+                return Err(LexerError::InvalidNumber(
+                    Span::new(start, self.pos),
+                    "0b".to_string(),
+                ));
+            }
+
+            match i64::from_str_radix(&slice, 2) {
+                Ok(value) => match value.to_string().parse::<N>() {
+                    Ok(v) => Ok(v),
+                    Err(_) => Err(LexerError::InvalidNumber(
+                        Span::new(start, self.pos),
+                        format!("0b{}", slice),
+                    )),
+                },
+                Err(_) => Err(LexerError::InvalidNumber(
+                    Span::new(start, self.pos),
+                    format!("0b{}", slice),
+                )),
+            }
+        // Check for hex prefix (0x)
+        } else if self.peek(0) == Some(b'0') && matches!(self.peek(1), Some(b'x') | Some(b'X')) {
+            self.advance(); // consume '0'
+            self.advance(); // consume 'x'
+
+            let hex_start = self.pos;
+            while let Some(c) = self.peek(0) {
+                if c.is_ascii_hexdigit() || c == b'_' {
+                    self.advance();
+                } else {
+                    break;
+                }
+            }
+
+            let slice: String = self.input[hex_start..self.pos]
+                .iter()
+                .filter(|&&b| b != b'_')
+                .map(|&b| b as char)
+                .collect();
+
+            if slice.is_empty() {
+                return Err(LexerError::InvalidNumber(
+                    Span::new(start, self.pos),
+                    "0x".to_string(),
+                ));
+            }
+
+            match i64::from_str_radix(&slice, 16) {
+                Ok(value) => match value.to_string().parse::<N>() {
+                    Ok(v) => Ok(v),
+                    Err(_) => Err(LexerError::InvalidNumber(
+                        Span::new(start, self.pos),
+                        format!("0x{}", slice),
+                    )),
+                },
+                Err(_) => Err(LexerError::InvalidNumber(
+                    Span::new(start, self.pos),
+                    format!("0x{}", slice),
+                )),
+            }
+        } else {
+            // Optional negative sign at start only
+            if self.peek(0) == Some(b'-') {
+                self.advance();
+            }
+
+            // Read integer part
+            while let Some(c) = self.peek(0) {
+                if c.is_ascii_digit() || c == b'_' {
+                    self.advance();
+                } else {
+                    break;
+                }
+            }
+
+            // Read decimal part
+            if self.peek(0) == Some(b'.') && self.peek(1).is_some_and(|b| b.is_ascii_digit()) {
+                self.advance(); // consume '.'
+                while let Some(c) = self.peek(0) {
+                    if c.is_ascii_digit() || c == b'_' {
+                        self.advance();
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            let slice: String = self.input[start..self.pos]
+                .iter()
+                .filter(|&&b| b != b'_')
+                .map(|&b| b as char)
+                .collect();
+
+            match slice.parse::<N>() {
+                Ok(value) => Ok(value),
+                Err(_) => Err(LexerError::InvalidNumber(Span::new(start, self.pos), slice)),
+            }
+        }
+    }
+}
+
+impl Iterator for Lexer<'_> {
+    type Item = Result<TokenSpan, LexerError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if self.finished {
+                return None;
+            }
+
+            match self.next_token() {
+                Ok(
+                    token @ TokenSpan {
+                        token: Token::Eof,
+                        span: _,
+                    },
+                ) => {
+                    self.finished = true;
+                    return Some(Ok(token));
+                }
+                Ok(token) => return Some(Ok(token)),
+                Err(e) => return Some(Err(e)),
+            }
+        }
+    }
+}

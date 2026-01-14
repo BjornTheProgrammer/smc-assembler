@@ -1,9 +1,18 @@
-[package]
-name = "smc-assembler"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+resolver = "3"
 
-[dependencies]
+members = ["crates/*"]
+
+default-members = ["crates/assembler"]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Bjorn Beishline"]
+license = "MIT"
+edition = "2024"
+repository = "https://github.com/BjornTheProgrammer/smc-language"
+
+[workspace.dependencies]
 anyhow = "1.0"
 arbitrary-int = "2.0.0"
 clap = { version = "4.5.54", features = ["derive"] }

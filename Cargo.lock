@@ -207,9 +207,19 @@ dependencies = [
  "anyhow",
  "arbitrary-int",
  "clap",
+ "smc-macros",
  "thiserror",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "smc-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
