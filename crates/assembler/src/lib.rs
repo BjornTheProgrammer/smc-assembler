@@ -1,7 +1,7 @@
 use std::{fmt::Write as _, fs, path::Path};
 
 use crate::{
-    assembler::{Assembler, AssemblerError},
+    assembler::{Assembler, AssemblerError, backends::Backend},
     lexer::{Lexer, LexerError},
     parser::{Parser, ParserError},
     save::save_file,
@@ -31,12 +31,13 @@ pub enum CompileError {
 pub fn compile_to_file<P1: AsRef<Path>, P2: AsRef<Path>>(
     input: P1,
     output: P2,
+    target: Backend,
     debug_artifacts: bool,
 ) -> Result<(), CompileError> {
     let input = input.as_ref();
     let output = output.as_ref();
 
-    let result = compile(input, debug_artifacts);
+    let result = compile(input, target, debug_artifacts);
 
     match result {
         Ok(result) => {
@@ -96,6 +97,7 @@ pub fn convert_to_mc(input: Vec<u16>) -> Result<String, std::fmt::Error> {
 
 pub fn compile<P: AsRef<Path>>(
     input: P,
+    target: Backend,
     generate_debug_artifacts: bool,
 ) -> Result<Vec<u16>, CompileError> {
     let input = input.as_ref();

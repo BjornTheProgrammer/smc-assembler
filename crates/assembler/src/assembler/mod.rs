@@ -12,6 +12,8 @@ use crate::{
     },
 };
 
+pub mod backends;
+
 pub struct Assembler {
     parser_results: ParserResult,
 }

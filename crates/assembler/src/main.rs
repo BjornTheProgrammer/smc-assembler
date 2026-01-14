@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Parser as ClapParser, Subcommand};
-use smc_assembler::compile_to_file;
+use smc_assembler::{assembler::backends::Backend, compile_to_file};
 use tracing::instrument;
 
 #[derive(ClapParser)]
@@ -20,6 +20,9 @@ enum Commands {
         /// Path of the output file
         output: String,
 
+        /// Target backend
+        target: Backend,
+
         /// Generate debug artifacts
         #[arg(long)]
         debug_artifacts: bool,
@@ -34,8 +37,9 @@ fn main() -> Result<()> {
         Commands::Compile {
             input,
             output,
+            target,
             debug_artifacts,
-        } => compile_to_file(input, output, *debug_artifacts)?,
+        } => compile_to_file(input, output, target.clone(), *debug_artifacts)?,
     }
 
     Ok(())

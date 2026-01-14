@@ -1,4 +1,4 @@
-use smc_assembler::{compile, convert_to_mc};
+use smc_assembler::{assembler::backends::Backend, compile, convert_to_mc};
 use std::{fs, path::PathBuf};
 
 pub fn test_compilation(program_name: &str) {
@@ -10,7 +10,7 @@ pub fn test_compilation(program_name: &str) {
     let mut expected_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     expected_path.push(format!("tests/expected/{}.mc", program_name));
 
-    let result = compile(path, false).expect("compilation should succeed");
+    let result = compile(path, Backend::BatPU2, false).expect("compilation should succeed");
     let mc_output = convert_to_mc(result).expect("conversion to mc should succeed");
 
     assert_eq!(
