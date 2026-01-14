@@ -84,14 +84,20 @@ impl<'a> Lexer<'a> {
     }
 
     fn skip_comments(&mut self) {
-        while self.peek(0) == Some(b'#') {
-            while let Some(b) = self.peek(0) {
-                self.advance();
-                if b == b'\n' {
-                    break;
+        loop {
+            if self.peek(0) == Some(b'#')
+                || (self.peek(0) == Some(b'/') && self.peek(1) == Some(b'/'))
+            {
+                while let Some(b) = self.peek(0) {
+                    self.advance();
+                    if b == b'\n' {
+                        break;
+                    }
                 }
+                self.skip_whitespace();
+            } else {
+                break;
             }
-            self.skip_whitespace();
         }
     }
 
