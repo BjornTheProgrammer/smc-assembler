@@ -204,7 +204,8 @@ fn get_offset_value(span: Span, defines: &DefineMap, offset: Offset) -> Result<u
         Offset::Define(identifier) => u4::from_u8(
             *defines
                 .get(&identifier)
-                .ok_or(AssemblerError::DefineNotFound(span, identifier))? as u8,
+                .ok_or(AssemblerError::DefineNotFound(span, identifier))? as i8 as u8
+                & 0x0F,
         ),
     })
 }

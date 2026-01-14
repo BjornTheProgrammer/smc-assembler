@@ -1,4 +1,8 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs::{self, OpenOptions},
+    io::Write,
+    path::PathBuf,
+};
 
 use anyhow::{Result, bail};
 use clap::{Parser as ClapParser, Subcommand};
@@ -106,12 +110,24 @@ fn main() -> Result<()> {
 
             match result {
                 Ok(result) => {
+                    let mut file = OpenOptions::new()
+                        .create(true)
+                        .truncate(true)
+                        .write(true)
+                        .open(&output)?;
+
                     let output = PathBuf::from(output);
-                    let bytes: Vec<u8> = result
+                    let bytes = result
                         .into_iter()
-                        .flat_map(|word| word.to_le_bytes())
-                        .collect();
-                    fs::write(&output, bytes)?;
+                        .map(|word| word.to_be_bytes())
+                        .collect::<Vec<_>>();
+
+                    for byte in bytes {
+                        let byte1 = byte[0];
+                        let byte2 = byte[1];
+                        writeln!(file, "{:08b}{:08b}", byte1, byte2)?;
+                    }
+
                     println!("Output written to: {}", output.display());
                 }
                 Err(errors) => {
