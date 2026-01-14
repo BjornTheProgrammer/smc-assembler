@@ -123,9 +123,9 @@ impl Assembler {
                 | (((r1.value() & 0xF) as u16) << 8)
                 | (((r2.value() & 0xF) as u16) << 4)
                 | ((r3.value() & 0xF) as u16)),
-            LoweredOperationWithArgs::Rsh(r1, r2) => Ok(0b0111 << 12
-                | (((r1.value() & 0xF) as u16) << 8)
-                | (((r2.value() & 0xF) as u16) << 4)),
+            LoweredOperationWithArgs::Rsh(r1, r2) => {
+                Ok(0b0111 << 12 | (((r1.value() & 0xF) as u16) << 8) | ((r2.value() & 0xF) as u16))
+            }
             LoweredOperationWithArgs::Ldi(r1, immediate) => Ok(0b1000 << 12
                 | (((r1.value() & 0xF) as u16) << 8)
                 | (get_immediate_value(span, &self.parser_results.defines, immediate)? as u8
@@ -221,7 +221,7 @@ fn get_address_value(
         Address::Define(identifier) => u10::from_u16(
             *defines
                 .get(&identifier)
-                .ok_or(AssemblerError::DefineNotFound(span, identifier))? as u16,
+                .ok_or(AssemblerError::DefineNotFound(span, identifier))? as i32 as u16,
         ),
         Address::Label(identifier) => u10::from_u16(
             *labels
@@ -241,6 +241,6 @@ fn get_immediate_value(
         Immediate::Define(identifier) => *defines
             .get(&identifier)
             .ok_or(AssemblerError::DefineNotFound(span, identifier))?
-            as i8,
+            as i32 as i8,
     })
 }

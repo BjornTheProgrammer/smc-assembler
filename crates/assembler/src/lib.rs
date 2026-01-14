@@ -79,6 +79,7 @@ pub fn compile_to_file(
                             LexerError::ExpectedCharacter(span, _) => span,
                             LexerError::UnknownCondition(span, _) => span,
                             LexerError::InvalidOffset(span, _) => span,
+                            LexerError::InvalidIsaCode(span, _) => span,
                         },
                         ParserError::DuplicateDefine(span, _) => span,
                         ParserError::DuplicateLabel(span, _) => span,

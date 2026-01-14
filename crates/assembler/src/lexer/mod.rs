@@ -31,6 +31,9 @@ pub enum LexerError {
 
     #[error("Invalid offset `{1}`")]
     InvalidOffset(Span, String),
+
+    #[error("Invalid ISA code `{1}`")]
+    InvalidIsaCode(Span, String),
 }
 
 impl<'a> Lexer<'a> {
@@ -185,7 +188,7 @@ impl<'a> Lexer<'a> {
                 Some(b'\'' | b'"') => match self.peek(1) {
                     Some(b'\'' | b'"') => {
                         let token = TokenSpan::new(
-                        Token::Number(self.advance().expect("Should be impossible for a character to not exist after checking for the character after") as f32),
+                        Token::Number(char_to_isa_code(self.advance().expect("Should be impossible for a character to not exist after checking for the character after")).ok_or(LexerError::InvalidIsaCode(Span::new(start, self.pos), String::from("Invalid ISA code")))? as f32),
                             Span::new(start, self.pos),
                         );
 
@@ -357,6 +360,18 @@ impl<'a> Lexer<'a> {
                 Err(_) => Err(LexerError::InvalidNumber(Span::new(start, self.pos), slice)),
             }
         }
+    }
+}
+
+fn char_to_isa_code(c: u8) -> Option<u8> {
+    match c {
+        b' ' => Some(0),
+        b'a'..=b'z' => Some(c - b'a' + 1),
+        b'A'..=b'Z' => Some(c - b'A' + 1),
+        b'.' => Some(27),
+        b'!' => Some(28),
+        b'?' => Some(29),
+        _ => None,
     }
 }
 

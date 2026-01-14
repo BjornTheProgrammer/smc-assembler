@@ -4,6 +4,8 @@ use smc_assembler::{compile, convert_to_mc};
 
 #[test]
 fn compiles_2048() {
+    use pretty_assertions::assert_eq;
+
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push("tests/programs/2048.smc");
 

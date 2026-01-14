@@ -236,7 +236,7 @@ impl Parser {
             Ok(TokenSpan {
                 token: Token::Number(n),
                 ..
-            }) => Some(Immediate::Value(n as i8)),
+            }) => Some(Immediate::Value(n as i32 as i8)),
             Ok(TokenSpan {
                 token: Token::Identifier(id),
                 ..
@@ -263,7 +263,7 @@ impl Parser {
             Ok(TokenSpan {
                 token: Token::Number(n),
                 ..
-            }) => Some(Offset::Value(u4::new(n as u8))),
+            }) => Some(Offset::Value(u4::new(n as i32 as u8 & 0x0F))),
             Ok(TokenSpan {
                 token: Token::Identifier(id),
                 ..
