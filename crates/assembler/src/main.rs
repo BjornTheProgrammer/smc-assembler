@@ -30,6 +30,10 @@ enum Commands {
 
         /// Path of the output file
         output: String,
+
+        /// Generate debug artifacts
+        #[arg(long)]
+        debug_artifacts: bool,
     },
 }
 
@@ -38,7 +42,11 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Compile { input, output } => {
+        Commands::Compile {
+            input,
+            output,
+            debug_artifacts,
+        } => {
             let input = PathBuf::from(input);
             if !input.exists() {
                 bail!("Specified path does not exist!");
@@ -48,46 +56,50 @@ fn main() -> Result<()> {
 
             let tokens: Vec<_> = Lexer::new(&source).into_iter().collect();
 
-            fs::write(
-                "tokens.txt",
-                tokens
-                    .iter()
-                    .map(|token| format!("{:?}", token))
-                    .collect::<Vec<String>>()
-                    .join("\n"),
-            )?;
+            if *debug_artifacts {
+                fs::write(
+                    "tokens.txt",
+                    tokens
+                        .iter()
+                        .map(|token| format!("{:?}", token))
+                        .collect::<Vec<String>>()
+                        .join("\n"),
+                )?;
+            }
 
             let parsed = Parser::new(tokens).parse();
 
-            fs::write(
-                "operations.txt",
-                parsed
-                    .operations
-                    .iter()
-                    .map(|parsed| format!("{:?}", parsed))
-                    .collect::<Vec<String>>()
-                    .join("\n"),
-            )?;
+            if *debug_artifacts {
+                fs::write(
+                    "operations.txt",
+                    parsed
+                        .operations
+                        .iter()
+                        .map(|parsed| format!("{:?}", parsed))
+                        .collect::<Vec<String>>()
+                        .join("\n"),
+                )?;
 
-            fs::write(
-                "labels.txt",
-                parsed
-                    .labels
-                    .iter()
-                    .map(|parsed| format!("{:?}", parsed))
-                    .collect::<Vec<String>>()
-                    .join("\n"),
-            )?;
+                fs::write(
+                    "labels.txt",
+                    parsed
+                        .labels
+                        .iter()
+                        .map(|parsed| format!("{:?}", parsed))
+                        .collect::<Vec<String>>()
+                        .join("\n"),
+                )?;
 
-            fs::write(
-                "defines.txt",
-                parsed
-                    .defines
-                    .iter()
-                    .map(|parsed| format!("{:?}", parsed))
-                    .collect::<Vec<String>>()
-                    .join("\n"),
-            )?;
+                fs::write(
+                    "defines.txt",
+                    parsed
+                        .defines
+                        .iter()
+                        .map(|parsed| format!("{:?}", parsed))
+                        .collect::<Vec<String>>()
+                        .join("\n"),
+                )?;
+            }
 
             let assembler = Assembler::new(parsed);
             let result = assembler.assemble();
