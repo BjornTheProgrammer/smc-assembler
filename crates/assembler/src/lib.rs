@@ -121,7 +121,7 @@ pub fn compile<P: AsRef<Path>>(
         .map_err(|err| CompileError::WriteFileError(err))?;
     }
 
-    let mut parsed = Parser::new(tokens).parse();
+    let mut parsed = Parser::new(target.clone(), tokens).parse();
 
     if generate_debug_artifacts {
         fs::write(
@@ -180,7 +180,7 @@ pub fn compile<P: AsRef<Path>>(
         parsed.defines.insert(port.to_string(), (i + 240) as f32);
     }
 
-    let assembler = Assembler::new(parsed);
+    let assembler = Assembler::new(target, parsed);
     assembler
         .assemble()
         .map_err(|err| CompileError::AssembleError(err, source))

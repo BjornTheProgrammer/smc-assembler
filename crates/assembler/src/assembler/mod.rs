@@ -2,6 +2,7 @@ use arbitrary_int::{u4, u10};
 use thiserror::Error;
 
 use crate::{
+    assembler::backends::Backend,
     lexer::token::{Condition, Span},
     parser::{
         DefineMap, LabelMap, ParserError, ParserResult,
@@ -31,7 +32,7 @@ pub enum AssemblerError {
 }
 
 impl Assembler {
-    pub fn new(parser_results: ParserResult) -> Self {
+    pub fn new(target: Backend, parser_results: ParserResult) -> Self {
         Assembler { parser_results }
     }
 

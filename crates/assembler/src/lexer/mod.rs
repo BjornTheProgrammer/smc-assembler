@@ -1,8 +1,6 @@
 use std::str::FromStr;
 
-use crate::lexer::token::{
-    Condition, Keyword, LoweredOperation, PseudoOperation, Register, Span, Token, TokenSpan,
-};
+use crate::lexer::token::{Condition, Keyword, Operation, Register, Span, Token, TokenSpan};
 use anyhow::Result;
 use smc_macros::match_keywords;
 use thiserror::Error;
@@ -111,30 +109,30 @@ impl<'a> Lexer<'a> {
         let start = self.pos;
 
         let keyword: Option<_> = match_keywords!(
-            "Nop" => Keyword::LoweredOperation(LoweredOperation::Nop),
-            "Hlt" => Keyword::LoweredOperation(LoweredOperation::Hlt),
-            "Add" => Keyword::LoweredOperation(LoweredOperation::Add),
-            "Sub" => Keyword::LoweredOperation(LoweredOperation::Sub),
-            "Nor" => Keyword::LoweredOperation(LoweredOperation::Nor),
-            "And" => Keyword::LoweredOperation(LoweredOperation::And),
-            "Xor" => Keyword::LoweredOperation(LoweredOperation::Xor),
-            "Rsh" => Keyword::LoweredOperation(LoweredOperation::Rsh),
-            "Ldi" => Keyword::LoweredOperation(LoweredOperation::Ldi),
-            "Adi" => Keyword::LoweredOperation(LoweredOperation::Adi),
-            "Jmp" => Keyword::LoweredOperation(LoweredOperation::Jmp),
-            "Brh" => Keyword::LoweredOperation(LoweredOperation::Brh),
-            "Cal" => Keyword::LoweredOperation(LoweredOperation::Cal),
-            "Ret" => Keyword::LoweredOperation(LoweredOperation::Ret),
-            "Lod" => Keyword::LoweredOperation(LoweredOperation::Lod),
-            "Str" => Keyword::LoweredOperation(LoweredOperation::Str),
+            "Nop" => Keyword::Operation(Operation::Nop),
+            "Hlt" => Keyword::Operation(Operation::Hlt),
+            "Add" => Keyword::Operation(Operation::Add),
+            "Sub" => Keyword::Operation(Operation::Sub),
+            "Nor" => Keyword::Operation(Operation::Nor),
+            "And" => Keyword::Operation(Operation::And),
+            "Xor" => Keyword::Operation(Operation::Xor),
+            "Rsh" => Keyword::Operation(Operation::Rsh),
+            "Ldi" => Keyword::Operation(Operation::Ldi),
+            "Adi" => Keyword::Operation(Operation::Adi),
+            "Jmp" => Keyword::Operation(Operation::Jmp),
+            "Brh" => Keyword::Operation(Operation::Brh),
+            "Cal" => Keyword::Operation(Operation::Cal),
+            "Ret" => Keyword::Operation(Operation::Ret),
+            "Lod" => Keyword::Operation(Operation::Lod),
+            "Str" => Keyword::Operation(Operation::Str),
 
-            "Cmp" => Keyword::PseudoOperation(PseudoOperation::Cmp),
-            "Mov" => Keyword::PseudoOperation(PseudoOperation::Mov),
-            "Lsh" => Keyword::PseudoOperation(PseudoOperation::Lsh),
-            "Inc" => Keyword::PseudoOperation(PseudoOperation::Inc),
-            "Dec" => Keyword::PseudoOperation(PseudoOperation::Dec),
-            "Not" => Keyword::PseudoOperation(PseudoOperation::Not),
-            "Neg" => Keyword::PseudoOperation(PseudoOperation::Neg),
+            "Cmp" => Keyword::Operation(Operation::Cmp),
+            "Mov" => Keyword::Operation(Operation::Mov),
+            "Lsh" => Keyword::Operation(Operation::Lsh),
+            "Inc" => Keyword::Operation(Operation::Inc),
+            "Dec" => Keyword::Operation(Operation::Dec),
+            "Not" => Keyword::Operation(Operation::Not),
+            "Neg" => Keyword::Operation(Operation::Neg),
 
             "eq" => Keyword::Condition(Condition::Equal),
             "ne" => Keyword::Condition(Condition::NotEqual),

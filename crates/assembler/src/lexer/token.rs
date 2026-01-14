@@ -113,7 +113,7 @@ pub enum Condition {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum LoweredOperation {
+pub enum Operation {
     Nop,
     Hlt,
     Add,
@@ -130,10 +130,6 @@ pub enum LoweredOperation {
     Ret,
     Lod,
     Str,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum PseudoOperation {
     Cmp,
     Mov,
     Lsh,
@@ -145,8 +141,7 @@ pub enum PseudoOperation {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Keyword {
-    LoweredOperation(LoweredOperation),
-    PseudoOperation(PseudoOperation),
+    Operation(Operation),
     Register(Register),
     Condition(Condition),
     Define,
