@@ -84,6 +84,36 @@ impl TrieNode {
     }
 }
 
+/// Check if a keyword needs a word boundary check (ends with alphanumeric or underscore)
+fn needs_word_boundary_check(keyword: &str) -> bool {
+    keyword
+        .chars()
+        .last()
+        .map(|c| c.is_ascii_alphanumeric() || c == '_')
+        .unwrap_or(false)
+}
+
+/// Generate a word boundary guard for a terminal match
+fn generate_terminal_with_boundary_check(
+    idx: usize,
+    keyword_len: usize,
+    expr: &Expr,
+    keyword: &str,
+) -> TokenStream2 {
+    if needs_word_boundary_check(keyword) {
+        // Generate boundary check: ensure next char is not alphanumeric or underscore
+        quote! {
+            match self.peek(#keyword_len) {
+                Some(c) if c.is_ascii_alphanumeric() || c == b'_' => None,
+                _ => Some((#keyword_len, #expr))
+            }
+        }
+    } else {
+        // No boundary check needed for operators like "!=", ">=", etc.
+        quote! { Some((#keyword_len, #expr)) }
+    }
+}
+
 /// Generate the trie matching code recursively.
 /// Returns code that evaluates to `Option<(usize, keyword_expr)>` where usize is keyword length.
 ///
@@ -100,7 +130,7 @@ fn generate_trie_match(
         if let Some(idx) = node.terminal {
             let expr = expressions[idx];
             let keyword_len = keywords[idx].len();
-            return quote! { Some((#keyword_len, #expr)) };
+            return generate_terminal_with_boundary_check(idx, keyword_len, expr, keywords[idx]);
         }
         return quote! { None };
     }
@@ -121,10 +151,16 @@ fn generate_trie_match(
                 let idx = node.terminal.unwrap();
                 let fallback_expr = expressions[idx];
                 let fallback_len = keywords[idx].len();
+                let fallback_with_check = generate_terminal_with_boundary_check(
+                    idx,
+                    fallback_len,
+                    fallback_expr,
+                    keywords[idx],
+                );
                 quote! {
                     match #child_code {
                         Some(result) => Some(result),
-                        None => Some((#fallback_len, #fallback_expr))
+                        None => #fallback_with_check
                     }
                 }
             } else {
@@ -147,7 +183,9 @@ fn generate_trie_match(
     let default_arm = if let Some(idx) = node.terminal {
         let expr = expressions[idx];
         let keyword_len = keywords[idx].len();
-        quote! { _ => Some((#keyword_len, #expr)) }
+        let terminal_with_check =
+            generate_terminal_with_boundary_check(idx, keyword_len, expr, keywords[idx]);
+        quote! { _ => #terminal_with_check }
     } else {
         quote! { _ => None }
     };
@@ -178,6 +216,13 @@ fn generate_trie_match(
 /// - `usize` is the length of the matched keyword
 /// - `T` is the type of the expressions on the right-hand side of `=>`
 /// - Returns `None` if no keyword matches
+///
+/// # Word Boundary Checking
+///
+/// For keywords ending in alphanumeric characters, the macro automatically
+/// ensures they don't match when followed by more alphanumeric characters.
+/// For example, "c" won't match in "count" - it will return None so the
+/// lexer can treat "count" as an identifier.
 ///
 /// # Requirements
 ///
