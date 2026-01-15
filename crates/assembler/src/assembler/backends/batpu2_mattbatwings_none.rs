@@ -88,13 +88,12 @@ pub fn assemble_operation(
             | ((r2.check(&backend, &span)? & 0xF) as u16)),
         OperationWithArgs::Ldi2(r1, immediate) => Ok(0b1000 << 12
             | (((r1.check(&backend, &span)? & 0xF) as u16) << 8)
-            | (get_immediate_value(span, defines, immediate)? as u8 as u16)),
+            | (check_immediate_value(get_immediate_value(&span, defines, immediate)?, &span)?)),
         OperationWithArgs::Adi2(r1, immediate) => Ok(0b1001 << 12
             | (((r1.check(&backend, &span)? & 0xF) as u16) << 8)
-            | (get_immediate_value(span, defines, immediate)? as u8 as u16)),
+            | (check_immediate_value(get_immediate_value(&span, defines, immediate)?, &span)?)),
         OperationWithArgs::Jmp(address) => Ok(0b1010 << 12
-            | (check_address_value(get_address_value(&span, defines, labels, address)?, &span)?
-                & 0b0000_0011_1111_1111)),
+            | check_address_value(get_address_value(&span, defines, labels, address)?, &span)?),
         OperationWithArgs::Brh(condition, address) => {
             let condition = match condition {
                 Condition::Equal => 0b00,
@@ -106,10 +105,7 @@ pub fn assemble_operation(
 
             Ok(0b1011 << 12
                 | (condition << 10)
-                | (check_address_value(
-                    get_address_value(&span, defines, labels, address)?,
-                    &span,
-                )? & 0b0000_0011_1111_1111))
+                | check_address_value(get_address_value(&span, defines, labels, address)?, &span)?)
         }
         OperationWithArgs::Cal(address) => Ok(0b1100 << 12
             | (check_address_value(get_address_value(&span, defines, labels, address)?, &span)?
@@ -143,6 +139,14 @@ pub fn assemble_operation(
         }
         _ => Err(AssemblerError::UnsupportedOperation(span, operation)),
     }
+}
+
+fn check_immediate_value(immediate: i128, span: &Span) -> Result<u16, AssemblerError> {
+    if immediate < -128 || immediate > 255 {
+        return Err(AssemblerError::ImmediateOutOfRange(span.clone(), immediate));
+    }
+
+    Ok((immediate as u8) as u16)
 }
 
 fn check_offset_value(offset: i128, span: &Span) -> Result<u16, AssemblerError> {

@@ -41,6 +41,9 @@ pub enum AssemblerError {
 
     #[error("AssemblerError: Invalid Condition for target {1:?}")]
     InvalidCondition(Span, Condition),
+
+    #[error("AssemblerError: Immediate out of range {1}")]
+    ImmediateOutOfRange(Span, i128),
 }
 
 impl Assembler {
@@ -123,7 +126,7 @@ pub fn get_address_value(
 }
 
 pub fn get_immediate_value(
-    span: Span,
+    span: &Span,
     defines: &DefineMap,
     immediate: Immediate,
 ) -> Result<i128, AssemblerError> {
@@ -131,7 +134,7 @@ pub fn get_immediate_value(
         Immediate::Value(val) => val,
         Immediate::Define(identifier) => *defines
             .get(&identifier)
-            .ok_or(AssemblerError::DefineNotFound(span, identifier))?
+            .ok_or(AssemblerError::DefineNotFound(span.clone(), identifier))?
             as i128,
     })
 }
