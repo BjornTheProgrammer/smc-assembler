@@ -87,11 +87,8 @@ pub fn compile_to_file<P1: AsRef<Path>, P2: AsRef<Path>>(
     }
 }
 
-pub fn convert_to_mc(input: Vec<u16>) -> Result<String, std::fmt::Error> {
-    let bytes = input
-        .into_iter()
-        .map(|word| word.to_be_bytes())
-        .collect::<Vec<_>>();
+pub fn convert_to_mc(input: Vec<u8>) -> Result<String, std::fmt::Error> {
+    let bytes = input.chunks(2);
 
     let mut output = String::new();
     for byte in bytes {
@@ -106,7 +103,7 @@ pub fn compile<P: AsRef<Path>>(
     input: P,
     target: Backend,
     generate_debug_artifacts: bool,
-) -> Result<Vec<u16>, CompileError> {
+) -> Result<Vec<u8>, CompileError> {
     let input = input.as_ref();
     if !input.exists() {
         return Err(CompileError::PathDoesNotExist.into());

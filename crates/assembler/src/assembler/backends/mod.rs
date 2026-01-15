@@ -35,14 +35,15 @@ impl Backend {
         labels: &LabelMap,
         op: OperationWithArgs,
         span: Span,
-    ) -> Result<u16, AssemblerError> {
+    ) -> Result<Vec<u8>, AssemblerError> {
         match self {
-            Backend::BatPU2 => {
-                batpu2_mattbatwings_none::assemble_operation(defines, labels, op, span)
-            }
+            Backend::BatPU2 => Ok(batpu2_mattbatwings_none::assemble_operation(
+                defines, labels, op, span,
+            )?
+            .to_be_bytes()
+            .to_vec()),
             Backend::TauAnalyzersNone => {
-                Ok(0)
-                // tau_analyzers_none::assemble_operation(defines, labels, op, span)
+                tau_analyzers_none::assemble_operation(defines, labels, op, span)
             }
         }
     }

@@ -255,11 +255,10 @@ fn reset_registers(region: &mut Region, offset: [i32; 3]) {
     }
 }
 
-pub fn make_schematic(data: &[u16]) -> Result<Schematic, CompileError> {
+pub fn make_schematic(data: &[u8]) -> Result<Schematic, CompileError> {
     let mut lines: Vec<String> = Vec::new();
-    for word in data {
-        let bytes = word.to_be_bytes();
-        lines.push(format!("{:08b}{:08b}", bytes[0], bytes[1]));
+    for word in data.chunks(2) {
+        lines.push(format!("{:08b}{:08b}", word[0], word[1]));
     }
 
     // Pad to 1024 lines
@@ -290,7 +289,7 @@ pub fn make_schematic(data: &[u16]) -> Result<Schematic, CompileError> {
     Ok(schematic)
 }
 
-pub fn save_file<P: AsRef<Path>>(output: P, data: Vec<u16>) -> Result<(), CompileError> {
+pub fn save_file<P: AsRef<Path>>(output: P, data: Vec<u8>) -> Result<(), CompileError> {
     let output = output.as_ref();
     let extension = output
         .extension()
@@ -317,9 +316,8 @@ pub fn save_file<P: AsRef<Path>>(output: P, data: Vec<u16>) -> Result<(), Compil
         .open(output)
         .map_err(CompileError::WriteFileError)?;
 
-    for word in data {
-        let bytes = word.to_be_bytes();
-        writeln!(file, "{:08b}{:08b}", bytes[0], bytes[1]).map_err(CompileError::WriteFileError)?;
+    for word in data.chunks(2) {
+        writeln!(file, "{:08b}{:08b}", word[0], word[1]).map_err(CompileError::WriteFileError)?;
     }
 
     Ok(())

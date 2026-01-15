@@ -51,7 +51,7 @@ impl Assembler {
         }
     }
 
-    pub fn assemble(mut self) -> Result<Vec<u16>, Vec<AssemblerError>> {
+    pub fn assemble(mut self) -> Result<Vec<u8>, Vec<AssemblerError>> {
         let mut bytes = Vec::new();
         let mut errors = Vec::new();
 
@@ -76,7 +76,7 @@ impl Assembler {
                 op,
                 span,
             ) {
-                Ok(word) => bytes.push(word),
+                Ok(mut word) => bytes.append(&mut word),
                 Err(e) => errors.push(e),
             }
         }
