@@ -1,4 +1,7 @@
-use crate::lexer::token::{Condition, Register, Span};
+use crate::{
+    assembler::backends::Register,
+    lexer::token::{Condition, Span},
+};
 use arbitrary_int::{u4, u10};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -21,7 +24,7 @@ pub enum Offset {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum LoweredOperationWithArgs {
+pub enum OperationWithArgs {
     Nop,
     Hlt,
     Add(Register, Register, Register),
@@ -38,10 +41,7 @@ pub enum LoweredOperationWithArgs {
     Ret,
     Lod(Register, Register, Option<Offset>),
     Str(Register, Register, Option<Offset>),
-}
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum PseudoOperationWithArgs {
     Cmp(Register, Register), // CMP A B -> SUB A B r0
     Mov(Register, Register), // MOV A C -> ADD A r0 C
     Lsh(Register, Register), // LSH A C -> ADD A A C
@@ -52,7 +52,13 @@ pub enum PseudoOperationWithArgs {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum OperationWithArgs {
-    Lowered(LoweredOperationWithArgs, Span),
-    Pseudo(PseudoOperationWithArgs, Span),
+pub struct SpannedOperation {
+    pub op: OperationWithArgs,
+    pub span: Span,
+}
+
+impl SpannedOperation {
+    pub fn new(op: OperationWithArgs, span: Span) -> Self {
+        Self { op, span }
+    }
 }

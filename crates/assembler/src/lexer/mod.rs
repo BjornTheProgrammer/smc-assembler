@@ -1,7 +1,11 @@
 use std::str::FromStr;
 
-use crate::lexer::token::{Condition, Keyword, Operation, Register, Span, Token, TokenSpan};
+use crate::{
+    assembler::backends::Register,
+    lexer::token::{Condition, Keyword, Operation, Span, Token, TokenSpan},
+};
 use anyhow::Result;
+use arbitrary_int::u4;
 use smc_macros::match_keywords;
 use thiserror::Error;
 
@@ -154,22 +158,22 @@ impl<'a> Lexer<'a> {
             "carry" => Keyword::Condition(Condition::GreaterEqual),
             "notcarry" => Keyword::Condition(Condition::Less),
 
-            "r0" => Keyword::Register(Register::from_u8(0)),
-            "r1" => Keyword::Register(Register::from_u8(1)),
-            "r2" => Keyword::Register(Register::from_u8(2)),
-            "r3" => Keyword::Register(Register::from_u8(3)),
-            "r4" => Keyword::Register(Register::from_u8(4)),
-            "r5" => Keyword::Register(Register::from_u8(5)),
-            "r6" => Keyword::Register(Register::from_u8(6)),
-            "r7" => Keyword::Register(Register::from_u8(7)),
-            "r8" => Keyword::Register(Register::from_u8(8)),
-            "r9" => Keyword::Register(Register::from_u8(9)),
-            "r10" => Keyword::Register(Register::from_u8(10)),
-            "r11" => Keyword::Register(Register::from_u8(11)),
-            "r12" => Keyword::Register(Register::from_u8(12)),
-            "r13" => Keyword::Register(Register::from_u8(13)),
-            "r14" => Keyword::Register(Register::from_u8(14)),
-            "r15" => Keyword::Register(Register::from_u8(15)),
+            "r0" => Keyword::Register(Register::BatPU2(u4::from_u8(0))),
+            "r1" => Keyword::Register(Register::BatPU2(u4::from_u8(1))),
+            "r2" => Keyword::Register(Register::BatPU2(u4::from_u8(2))),
+            "r3" => Keyword::Register(Register::BatPU2(u4::from_u8(3))),
+            "r4" => Keyword::Register(Register::BatPU2(u4::from_u8(4))),
+            "r5" => Keyword::Register(Register::BatPU2(u4::from_u8(5))),
+            "r6" => Keyword::Register(Register::BatPU2(u4::from_u8(6))),
+            "r7" => Keyword::Register(Register::BatPU2(u4::from_u8(7))),
+            "r8" => Keyword::Register(Register::BatPU2(u4::from_u8(8))),
+            "r9" => Keyword::Register(Register::BatPU2(u4::from_u8(9))),
+            "r10" => Keyword::Register(Register::BatPU2(u4::from_u8(10))),
+            "r11" => Keyword::Register(Register::BatPU2(u4::from_u8(11))),
+            "r12" => Keyword::Register(Register::BatPU2(u4::from_u8(12))),
+            "r13" => Keyword::Register(Register::BatPU2(u4::from_u8(13))),
+            "r14" => Keyword::Register(Register::BatPU2(u4::from_u8(14))),
+            "r15" => Keyword::Register(Register::BatPU2(u4::from_u8(15))),
 
             "define" => Keyword::Define,
         );

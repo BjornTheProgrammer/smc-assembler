@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use arbitrary_int::u4;
+use crate::assembler::backends::Register;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct TokenSpan {
@@ -101,8 +101,6 @@ impl Span {
         )
     }
 }
-
-pub type Register = u4;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Condition {

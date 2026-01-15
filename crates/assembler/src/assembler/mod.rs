@@ -6,10 +6,7 @@ use crate::{
     lexer::token::{Condition, Span},
     parser::{
         DefineMap, LabelMap, ParserError, ParserResult,
-        operations::{
-            Address, Immediate, LoweredOperationWithArgs, Offset, OperationWithArgs,
-            PseudoOperationWithArgs,
-        },
+        operations::{Address, Immediate, Offset, OperationWithArgs, SpannedOperation},
     },
 };
 
@@ -29,6 +26,9 @@ pub enum AssemblerError {
 
     #[error("{0}")]
     ParserError(#[from] ParserError),
+
+    #[error("AssemblerError: Unsupported operation {1:?}")]
+    UnsupportedOperation(Span, OperationWithArgs),
 }
 
 impl Assembler {
@@ -47,45 +47,8 @@ impl Assembler {
 
         let operations = std::mem::take(&mut self.parser_results.operations);
 
-        let operations = operations
-            .into_iter()
-            .map(|operation| match operation {
-                OperationWithArgs::Lowered(lowered_operation_with_args, span) => {
-                    (lowered_operation_with_args, span)
-                }
-                OperationWithArgs::Pseudo(pseudo_operation_with_args, span) => {
-                    let r0 = u4::from_u8(0u8);
-                    let op = match pseudo_operation_with_args {
-                        PseudoOperationWithArgs::Cmp(a, b) => {
-                            LoweredOperationWithArgs::Sub(a, b, r0)
-                        }
-                        PseudoOperationWithArgs::Mov(a, c) => {
-                            LoweredOperationWithArgs::Add(a, r0, c)
-                        }
-                        PseudoOperationWithArgs::Lsh(a, c) => {
-                            LoweredOperationWithArgs::Add(a, a, c)
-                        }
-                        PseudoOperationWithArgs::Inc(a) => {
-                            LoweredOperationWithArgs::Adi(a, Immediate::Value(1))
-                        }
-                        PseudoOperationWithArgs::Dec(a) => {
-                            LoweredOperationWithArgs::Adi(a, Immediate::Value(-1))
-                        }
-                        PseudoOperationWithArgs::Not(a, c) => {
-                            LoweredOperationWithArgs::Nor(a, r0, c)
-                        }
-                        PseudoOperationWithArgs::Neg(a, c) => {
-                            LoweredOperationWithArgs::Sub(r0, a, c)
-                        }
-                    };
-
-                    (op, span)
-                }
-            })
-            .collect::<Vec<_>>();
-
-        for (operation, span) in operations {
-            match self.assemble_operation(operation, span) {
+        for SpannedOperation { op, span } in operations {
+            match self.assemble_operation(op, span) {
                 Ok(word) => bytes.push(word),
                 Err(e) => errors.push(e),
             }
@@ -100,44 +63,44 @@ impl Assembler {
 
     fn assemble_operation(
         &self,
-        operation: LoweredOperationWithArgs,
+        operation: OperationWithArgs,
         span: Span,
     ) -> Result<u16, AssemblerError> {
         match operation {
-            LoweredOperationWithArgs::Nop => Ok(0b0000 << 12),
-            LoweredOperationWithArgs::Hlt => Ok(0b0001 << 12),
-            LoweredOperationWithArgs::Add(r1, r2, r3) => Ok(0b0010 << 12
+            OperationWithArgs::Nop => Ok(0b0000 << 12),
+            OperationWithArgs::Hlt => Ok(0b0001 << 12),
+            OperationWithArgs::Add(r1, r2, r3) => Ok(0b0010 << 12
                 | (((r1.value() & 0xF) as u16) << 8)
                 | (((r2.value() & 0xF) as u16) << 4)
                 | ((r3.value() & 0xF) as u16)),
-            LoweredOperationWithArgs::Sub(r1, r2, r3) => Ok(0b0011 << 12
+            OperationWithArgs::Sub(r1, r2, r3) => Ok(0b0011 << 12
                 | (((r1.value() & 0xF) as u16) << 8)
                 | (((r2.value() & 0xF) as u16) << 4)
                 | ((r3.value() & 0xF) as u16)),
-            LoweredOperationWithArgs::Nor(r1, r2, r3) => Ok(0b0100 << 12
+            OperationWithArgs::Nor(r1, r2, r3) => Ok(0b0100 << 12
                 | (((r1.value() & 0xF) as u16) << 8)
                 | (((r2.value() & 0xF) as u16) << 4)
                 | ((r3.value() & 0xF) as u16)),
-            LoweredOperationWithArgs::And(r1, r2, r3) => Ok(0b0101 << 12
+            OperationWithArgs::And(r1, r2, r3) => Ok(0b0101 << 12
                 | (((r1.value() & 0xF) as u16) << 8)
                 | (((r2.value() & 0xF) as u16) << 4)
                 | ((r3.value() & 0xF) as u16)),
-            LoweredOperationWithArgs::Xor(r1, r2, r3) => Ok(0b0110 << 12
+            OperationWithArgs::Xor(r1, r2, r3) => Ok(0b0110 << 12
                 | (((r1.value() & 0xF) as u16) << 8)
                 | (((r2.value() & 0xF) as u16) << 4)
                 | ((r3.value() & 0xF) as u16)),
-            LoweredOperationWithArgs::Rsh(r1, r2) => {
+            OperationWithArgs::Rsh(r1, r2) => {
                 Ok(0b0111 << 12 | (((r1.value() & 0xF) as u16) << 8) | ((r2.value() & 0xF) as u16))
             }
-            LoweredOperationWithArgs::Ldi(r1, immediate) => Ok(0b1000 << 12
+            OperationWithArgs::Ldi(r1, immediate) => Ok(0b1000 << 12
                 | (((r1.value() & 0xF) as u16) << 8)
                 | (get_immediate_value(span, &self.parser_results.defines, immediate)? as u8
                     as u16)),
-            LoweredOperationWithArgs::Adi(r1, immediate) => Ok(0b1001 << 12
+            OperationWithArgs::Adi(r1, immediate) => Ok(0b1001 << 12
                 | (((r1.value() & 0xF) as u16) << 8)
                 | (get_immediate_value(span, &self.parser_results.defines, immediate)? as u8
                     as u16)),
-            LoweredOperationWithArgs::Jmp(address) => Ok(0b1010 << 12
+            OperationWithArgs::Jmp(address) => Ok(0b1010 << 12
                 | (get_address_value(
                     span,
                     &self.parser_results.defines,
@@ -146,7 +109,7 @@ impl Assembler {
                 )?
                 .value()
                     & 0b0000_0011_1111_1111)),
-            LoweredOperationWithArgs::Brh(condition, address) => {
+            OperationWithArgs::Brh(condition, address) => {
                 let condition = match condition {
                     Condition::Equal => 0b00,
                     Condition::NotEqual => 0b01,
@@ -165,7 +128,7 @@ impl Assembler {
                     .value()
                         & 0b0000_0011_1111_1111))
             }
-            LoweredOperationWithArgs::Cal(address) => Ok(0b1100 << 12
+            OperationWithArgs::Cal(address) => Ok(0b1100 << 12
                 | (get_address_value(
                     span,
                     &self.parser_results.defines,
@@ -174,8 +137,8 @@ impl Assembler {
                 )?
                 .value()
                     & 0b0000_0011_1111_1111)),
-            LoweredOperationWithArgs::Ret => Ok(0b1101_0000_0000_0000),
-            LoweredOperationWithArgs::Lod(r1, r2, offset) => {
+            OperationWithArgs::Ret => Ok(0b1101_0000_0000_0000),
+            OperationWithArgs::Lod(r1, r2, offset) => {
                 let offset = match offset {
                     Some(offset) => get_offset_value(span, &self.parser_results.defines, offset)?,
                     None => u4::from_u8(0b0000u8),
@@ -186,7 +149,7 @@ impl Assembler {
                     | (((r2.value() & 0xF) as u16) << 4)
                     | ((offset.value() & 0xF) as u16))
             }
-            LoweredOperationWithArgs::Str(r1, r2, offset) => {
+            OperationWithArgs::Str(r1, r2, offset) => {
                 let offset = match offset {
                     Some(offset) => get_offset_value(span, &self.parser_results.defines, offset)?,
                     None => u4::from_u8(0b0000u8),
@@ -197,6 +160,7 @@ impl Assembler {
                     | (((r2.value() & 0xF) as u16) << 4)
                     | ((offset.value() & 0xF) as u16))
             }
+            _ => Err(AssemblerError::UnsupportedOperation(span, operation)),
         }
     }
 }
