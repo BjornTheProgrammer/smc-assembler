@@ -1,6 +1,6 @@
 # SMC Language
 
-Currently just an assembler, but will be extended to a full programming language in the future.
+An assembler that supports various MineCraft ISAs. Currently just an assembler, but will be extended to a full programming language in the future.
 
 ## Installation
 
@@ -19,6 +19,7 @@ SMC assembly is a compatible alternative to BatPU-2, but still offers better a b
 * No Python VM needed
 * Fast compilation
 * Easy to use CLI
+* Supports multiple MineCraft ISAs other than the BatPU-2
 
 ### Error Messages
 
@@ -71,7 +72,7 @@ Options:
 With the compile command, the ext given will determine the output format.
 
 ```bash
-compile ./minesweeper.smc ./minesweeper.schem
+smc-assembler compile --target batpu2-mattbatwings-none ./minesweeper.smc ./minesweeper.schem
 ```
 
 ## Extensions
