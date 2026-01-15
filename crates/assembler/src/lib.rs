@@ -100,6 +100,14 @@ pub fn convert_to_mc(input: Vec<u8>) -> Result<String, std::fmt::Error> {
     Ok(output)
 }
 
+pub fn convert_to_tau(input: Vec<u8>) -> Result<String, std::fmt::Error> {
+    let mut output = String::new();
+    for byte in input {
+        writeln!(output, "{:08b}", byte)?;
+    }
+    Ok(output)
+}
+
 pub fn compile<P: AsRef<Path>>(
     input: P,
     target: Backend,
