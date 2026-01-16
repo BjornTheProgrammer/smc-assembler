@@ -20,12 +20,16 @@ pub enum CompileError {
     ReadFileError(std::io::Error),
     #[error("Failed to write file: {0}")]
     WriteFileError(std::io::Error),
+    #[error("Failed to format: {0}")]
+    FormatError(std::fmt::Error),
     #[error("Failed to assemble")]
     AssembleError(Vec<AssemblerError>, String),
     #[error("Compilation failed")]
     CompilationFailed,
     #[error("Schematic save failed")]
     SchematicSaveFailed(#[from] mc_schem::Error),
+    #[error("Unsupported file type")]
+    UnsupportedFileType,
 }
 
 pub fn compile_to_file<P1: AsRef<Path>, P2: AsRef<Path>>(

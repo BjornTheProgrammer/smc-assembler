@@ -1,7 +1,7 @@
 use mc_schem::{Block, Region, Schematic};
-use std::{fs::OpenOptions, io::Write as _, path::Path};
+use std::{fs, path::Path};
 
-use crate::CompileError;
+use crate::{CompileError, convert_to_mc, convert_to_tau};
 
 fn make_block(id: &str) -> Block {
     Block::from_id(id).unwrap_or_else(|_| Block::air())
@@ -308,21 +308,23 @@ pub fn save_file<P: AsRef<Path>>(output: P, data: Vec<u8>) -> Result<(), Compile
         return Ok(());
     }
 
-    // Default: write as text file
-    let mut file = OpenOptions::new()
-        .create(true)
-        .truncate(true)
-        .write(true)
-        .open(output)
+    if extension == "mc" {
+        fs::write(
+            output,
+            convert_to_mc(data).map_err(CompileError::FormatError)?,
+        )
         .map_err(CompileError::WriteFileError)?;
 
-    for word in data.chunks(2) {
-        match word.get(1) {
-            Some(second_byte) => writeln!(file, "{:08b}{:08b}", word[0], second_byte)
-                .map_err(CompileError::WriteFileError)?,
-            None => writeln!(file, "{:08b}", word[0]).map_err(CompileError::WriteFileError)?,
-        }
+        return Ok(());
+    } else if extension == "tau" {
+        fs::write(
+            output,
+            convert_to_tau(data).map_err(CompileError::FormatError)?,
+        )
+        .map_err(CompileError::WriteFileError)?;
+
+        return Ok(());
     }
 
-    Ok(())
+    Err(CompileError::UnsupportedFileType)
 }
