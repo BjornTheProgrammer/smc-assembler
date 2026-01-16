@@ -5,6 +5,13 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "A simple assembler for a variety of MineCraft architectures"
+
+[package.metadata.wix]
+upgrade-guid = "C843CF1F-85C5-41C1-B39D-5A55719360F1"
+path-guid = "0751C7A0-4595-4181-918D-2766262B8172"
+license = false
+eula = false
 
 [dependencies]
 smc-macros = { version = "0.2.0", path = "../macros" }
