@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Parser as ClapParser, Subcommand};
-use smc_assembler::{assembler::backends::Backend, compile_to_file};
+use smc_assembler::{assembler::backends::Backend, compile_to_file, save::memory::Format};
 use tracing::instrument;
 
 #[derive(ClapParser)]
@@ -24,6 +24,10 @@ enum Commands {
         #[arg(short, long)]
         target: Backend,
 
+        /// Instruction memory format for schematic file
+        #[arg(short, long)]
+        format: Option<Format>,
+
         /// Generate debug artifacts
         #[arg(long)]
         debug_artifacts: bool,
@@ -40,7 +44,8 @@ fn main() -> Result<()> {
             output,
             target,
             debug_artifacts,
-        } => compile_to_file(input, output, target.clone(), *debug_artifacts)?,
+            format,
+        } => compile_to_file(input, output, target.clone(), *debug_artifacts, *format)?,
     }
 
     Ok(())

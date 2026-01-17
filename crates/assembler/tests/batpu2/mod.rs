@@ -1,4 +1,4 @@
-use smc_assembler::{assembler::backends::Backend, compile, convert_to_mc};
+use smc_assembler::{assembler::backends::Backend, compile, save::convert::convert_to_mc};
 use std::{fs, path::PathBuf};
 
 pub fn test_compilation(program_name: &str) {

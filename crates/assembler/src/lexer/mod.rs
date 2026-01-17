@@ -99,6 +99,18 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 self.skip_whitespace();
+            } else if self.peek(0) == Some(b'/') && self.peek(1) == Some(b'*') {
+                self.advance();
+                self.advance();
+                while let Some(b) = self.peek(0) {
+                    if b == b'*' && self.peek(1) == Some(b'/') {
+                        self.advance();
+                        self.advance();
+                        break;
+                    }
+                    self.advance();
+                }
+                self.skip_whitespace();
             } else {
                 break;
             }

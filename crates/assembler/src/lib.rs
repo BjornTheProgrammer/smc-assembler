@@ -1,10 +1,10 @@
-use std::{fmt::Write as _, fs, path::Path};
+use std::{fs, path::Path};
 
 use crate::{
     assembler::{Assembler, AssemblerError, backends::Backend},
     lexer::{Lexer, LexerError},
     parser::{Parser, ParserError},
-    save::save_file,
+    save::{memory::Format, save_file},
 };
 
 pub mod assembler;
@@ -30,6 +30,8 @@ pub enum CompileError {
     SchematicSaveFailed(#[from] mc_schem::Error),
     #[error("Unsupported file type")]
     UnsupportedFileType,
+    #[error("Missing format")]
+    MissingFormat,
 }
 
 pub fn compile_to_file<P1: AsRef<Path>, P2: AsRef<Path>>(
@@ -37,6 +39,7 @@ pub fn compile_to_file<P1: AsRef<Path>, P2: AsRef<Path>>(
     output: P2,
     target: Backend,
     debug_artifacts: bool,
+    format: Option<Format>,
 ) -> Result<(), CompileError> {
     let input = input.as_ref();
     let output = output.as_ref();
@@ -45,7 +48,7 @@ pub fn compile_to_file<P1: AsRef<Path>, P2: AsRef<Path>>(
 
     match result {
         Ok(result) => {
-            save_file(output, result)?;
+            save_file(output, result, format)?;
 
             println!("Output written to: {}", output.display());
             return Ok(());
@@ -90,26 +93,6 @@ pub fn compile_to_file<P1: AsRef<Path>, P2: AsRef<Path>>(
             return Err(CompileError::CompilationFailed);
         }
     }
-}
-
-pub fn convert_to_mc(input: Vec<u8>) -> Result<String, std::fmt::Error> {
-    let bytes = input.chunks(2);
-
-    let mut output = String::new();
-    for byte in bytes {
-        let byte1 = byte[0];
-        let byte2 = byte[1];
-        writeln!(output, "{:08b}{:08b}", byte1, byte2)?;
-    }
-    Ok(output)
-}
-
-pub fn convert_to_tau(input: Vec<u8>) -> Result<String, std::fmt::Error> {
-    let mut output = String::new();
-    for byte in input {
-        writeln!(output, "{:08b}", byte)?;
-    }
-    Ok(output)
 }
 
 pub fn compile<P: AsRef<Path>>(
