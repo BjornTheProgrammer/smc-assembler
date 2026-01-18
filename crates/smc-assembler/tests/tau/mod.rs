@@ -10,8 +10,9 @@ pub fn test_compilation(program_name: &str) {
     let mut expected_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     expected_path.push(format!("tests/tau/expected/{}.tau", program_name));
 
+    let source = fs::read_to_string(path).expect("Should be able to read the source file");
     let result =
-        compile(path, Backend::TauAnalyzersNone, false).expect("compilation should succeed");
+        compile(&source, Backend::TauAnalyzersNone, false).expect("compilation should succeed");
     let mc_output = convert_to_tau(result).expect("conversion to mc should succeed");
 
     assert_eq!(

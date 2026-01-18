@@ -26,17 +26,15 @@ impl Span {
             start,
             end
         );
-
         Span { start, end }
     }
 
-    /// Calculate line and column from source text
-    pub fn location(&self, source: &str) -> (usize, usize) {
+    /// Calculate line and column from a byte offset in source text
+    fn offset_to_location(source: &str, offset: usize) -> (usize, usize) {
         let mut line = 1;
         let mut col = 1;
-
         for (i, ch) in source.char_indices() {
-            if i >= self.start {
+            if i >= offset {
                 break;
             }
             if ch == '\n' {
@@ -46,8 +44,22 @@ impl Span {
                 col += 1;
             }
         }
-
         (line, col)
+    }
+
+    /// Calculate line and column of the start position
+    pub fn start_location(&self, source: &str) -> (usize, usize) {
+        Self::offset_to_location(source, self.start)
+    }
+
+    /// Calculate line and column of the end position
+    pub fn end_location(&self, source: &str) -> (usize, usize) {
+        Self::offset_to_location(source, self.end)
+    }
+
+    /// Calculate line and column from source text (alias for start_location)
+    pub fn location(&self, source: &str) -> (usize, usize) {
+        self.start_location(source)
     }
 
     /// Get the text snippet from source
@@ -55,11 +67,10 @@ impl Span {
         &source[self.start..self.end.min(source.len())]
     }
 
-    /// Get the line containing this span
+    /// Get the line containing this span's start
     pub fn get_line<'a>(&self, source: &'a str) -> &'a str {
         let lines: Vec<&str> = source.lines().collect();
-        let (line_num, _) = self.location(source);
-
+        let (line_num, _) = self.start_location(source);
         if line_num > 0 && line_num <= lines.len() {
             lines[line_num - 1]
         } else {
@@ -77,25 +88,32 @@ impl Span {
 
     /// Format an error with context from the source code
     pub fn format_error<P: AsRef<Path>>(&self, file: P, source: &str, error_msg: &str) -> String {
-        let (line, col) = self.location(source);
+        let (start_line, start_col) = self.start_location(source);
+        let (end_line, end_col) = self.end_location(source);
         let error_line = self.get_line(source);
         let snippet = self.snippet(source);
 
         // Calculate how many characters to underline
         let underline_len = snippet.chars().count().max(1);
 
-        let line = format!("{line}");
-
+        let line_str = format!("{start_line}");
         let file = file.as_ref().display();
 
+        // Show range if span crosses multiple lines
+        let location = if start_line == end_line {
+            format!("{start_line}:{start_col}")
+        } else {
+            format!("{start_line}:{start_col}-{end_line}:{end_col}")
+        };
+
         format!(
-            "{} --> {file}:{line}:{col}\n{} |\n{line} | {error_line}\n{} | {}{}\n{} | {error_msg}\n",
-            " ".repeat(line.len()),
-            " ".repeat(line.len()),
-            " ".repeat(line.len()),
-            " ".repeat(col - 1),
+            "{} --> {file}:{location}\n{} |\n{line_str} | {error_line}\n{} | {}{}\n{} | {error_msg}\n",
+            " ".repeat(line_str.len()),
+            " ".repeat(line_str.len()),
+            " ".repeat(line_str.len()),
+            " ".repeat(start_col - 1),
             "^".repeat(underline_len),
-            " ".repeat(line.len()),
+            " ".repeat(line_str.len()),
         )
     }
 }

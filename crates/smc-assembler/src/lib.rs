@@ -23,7 +23,7 @@ pub enum CompileError {
     #[error("Failed to format: {0}")]
     FormatError(std::fmt::Error),
     #[error("Failed to assemble")]
-    AssembleError(Vec<AssemblerError>, String),
+    AssembleError(Vec<AssemblerError>),
     #[error("Compilation failed")]
     CompilationFailed,
     #[error("Schematic save failed")]
@@ -46,7 +46,13 @@ pub fn compile_to_file<P1: AsRef<Path>, P2: AsRef<Path>>(
     let input = input.as_ref();
     let output = output.as_ref();
 
-    let result = compile(input, target, debug_artifacts);
+    if !input.exists() {
+        return Err(CompileError::PathDoesNotExist.into());
+    }
+
+    let source = fs::read_to_string(&input).map_err(|err| CompileError::ReadFileError(err))?;
+
+    let result = compile(&source, target, debug_artifacts);
 
     match result {
         Ok(result) => {
@@ -56,8 +62,8 @@ pub fn compile_to_file<P1: AsRef<Path>, P2: AsRef<Path>>(
             return Ok(());
         }
         Err(errors) => {
-            let (errors, source) = match errors {
-                CompileError::AssembleError(assembler_errors, source) => (assembler_errors, source),
+            let errors = match errors {
+                CompileError::AssembleError(assembler_errors) => assembler_errors,
                 error @ _ => return Err(error),
             };
 
@@ -97,19 +103,12 @@ pub fn compile_to_file<P1: AsRef<Path>, P2: AsRef<Path>>(
     }
 }
 
-pub fn compile<P: AsRef<Path>>(
-    input: P,
+pub fn compile(
+    source: &str,
     target: Backend,
     generate_debug_artifacts: bool,
 ) -> Result<Vec<u8>, CompileError> {
-    let input = input.as_ref();
-    if !input.exists() {
-        return Err(CompileError::PathDoesNotExist.into());
-    }
-
-    let source = fs::read_to_string(&input).map_err(|err| CompileError::ReadFileError(err))?;
-
-    let tokens: Vec<_> = Lexer::new(&source).into_iter().collect();
+    let tokens: Vec<_> = Lexer::new(source).into_iter().collect();
 
     if generate_debug_artifacts {
         fs::write(
@@ -152,5 +151,6 @@ pub fn compile<P: AsRef<Path>>(
     let assembler = Assembler::new(target, parsed);
     assembler
         .assemble()
-        .map_err(|err| CompileError::AssembleError(err, source))
+        .result
+        .map_err(|err| CompileError::AssembleError(err))
 }

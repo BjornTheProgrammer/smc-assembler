@@ -15,6 +15,7 @@ pub mod backends;
 
 pub type LabelMap = HashMap<String, usize>;
 
+#[derive(Debug)]
 pub struct Assembler {
     parser_results: ParserResult,
     target: Backend,
@@ -50,6 +51,13 @@ pub enum AssemblerError {
     ImmediateOutOfRange(Span, i128),
 }
 
+#[derive(Debug)]
+pub struct AssemblerResult {
+    pub result: Result<Vec<u8>, Vec<AssemblerError>>,
+    pub defines: DefineMap,
+    pub labels: LabelMap,
+}
+
 impl Assembler {
     pub fn new(target: Backend, parser_results: ParserResult) -> Self {
         Assembler {
@@ -58,7 +66,7 @@ impl Assembler {
         }
     }
 
-    pub fn assemble(mut self) -> Result<Vec<u8>, Vec<AssemblerError>> {
+    pub fn assemble(mut self) -> AssemblerResult {
         let mut bytes = Vec::new();
         let mut errors = Vec::new();
 
@@ -100,9 +108,17 @@ impl Assembler {
         }
 
         if errors.is_empty() {
-            Ok(bytes)
+            AssemblerResult {
+                result: Ok(bytes),
+                defines: self.parser_results.defines,
+                labels,
+            }
         } else {
-            Err(errors)
+            AssemblerResult {
+                result: Err(errors),
+                defines: self.parser_results.defines,
+                labels,
+            }
         }
     }
 }

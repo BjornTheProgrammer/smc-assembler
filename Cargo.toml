@@ -3,7 +3,7 @@ resolver = "3"
 
 members = ["crates/*"]
 
-default-members = ["crates/assembler"]
+default-members = ["crates/smc-assembler"]
 
 [workspace.package]
 version = "0.2.0"
@@ -20,6 +20,10 @@ arbitrary-int = "2.0"
 
 tracing = "0.1"
 tracing-subscriber = { version = "0.3" }
+
+tokio = { version = "1.49", features = ["full"] }
+
+url = "2.5"
 
 # The profile that 'dist' will build with
 [profile.dist]

@@ -14,7 +14,7 @@ license = false
 eula = false
 
 [dependencies]
-smc-macros = { version = "0.2.0", path = "../macros" }
+smc-macros = { version = "0.2.0", path = "../smc-macros" }
 
 anyhow = { workspace = true }
 clap = { workspace = true }

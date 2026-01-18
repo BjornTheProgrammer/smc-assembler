@@ -10,7 +10,8 @@ pub fn test_compilation(program_name: &str) {
     let mut expected_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     expected_path.push(format!("tests/batpu2/expected/{}.mc", program_name));
 
-    let result = compile(path, Backend::BatPU2, false).expect("compilation should succeed");
+    let source = fs::read_to_string(path).expect("Should be able to read the source file");
+    let result = compile(&source, Backend::BatPU2, false).expect("compilation should succeed");
     let mc_output = convert_to_mc(result).expect("conversion to mc should succeed");
 
     assert_eq!(
