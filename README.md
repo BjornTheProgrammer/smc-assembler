@@ -4,11 +4,7 @@ An assembler that supports various MineCraft ISAs. Currently just an assembler, 
 
 ## Installation
 
-Have cargo installed on your system first, you can install it from [here](https://rust-lang.org/tools/install/).
-
-```bash
-cargo install smc-assembler
-```
+Download the latest release from [here](https://github.com/BjornTheProgrammer/smc-language).
 
 ## Why use this over [BatPU-2](https://github.com/mattbatwings/BatPU-2)
 
@@ -20,6 +16,8 @@ SMC assembly is a compatible alternative to BatPU-2, but still offers better a b
 * Fast compilation
 * Easy to use CLI
 * Supports multiple MineCraft ISAs other than the BatPU-2
+* [LSP support](https://github.com/BjornTheProgrammer/smc-zed-lsp)
+* (WIP) support for other instruction data formats
 
 ### Error Messages
 

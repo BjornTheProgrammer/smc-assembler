@@ -5,10 +5,17 @@ authors.workspace = true
 license.workspace = true
 edition.workspace = true
 repository.workspace = true
+description = "A Language Server Protocol implementation for the SMC programming language."
+
+[package.metadata.wix]
+upgrade-guid = "70391DFB-F3D7-40AE-9DEA-E7D929E6C6D0"
+path-guid = "72024713-0A9B-4222-AB43-17573F77865F"
+license = false
+eula = false
 
 [dependencies]
 tokio = { workspace = true }
 url = { workspace = true }
 
 tower-lsp = "0.20"
-smc-assembler = { version = "0.2.0", path = "../smc-assembler" }
+smc-assembler = { version = "0.3.0", path = "../smc-assembler" }
