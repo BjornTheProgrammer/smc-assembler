@@ -15,6 +15,9 @@ pub mod operations;
 use operations::{Address, Immediate, Offset, OperationWithArgs, SpannedOperation};
 
 pub type DefineMap = HashMap<String, f64>;
+pub type DefineSpanMap = HashMap<String, Span>;
+pub type LabelSpanMap = HashMap<String, Span>;
+pub type ReferenceMap = HashMap<String, Vec<Span>>;
 
 #[derive(Error, Debug, Clone)]
 pub enum ParserError {
@@ -48,6 +51,10 @@ pub struct ParserResult {
     pub defines: DefineMap,
     pub items: Vec<ParsedItem>,
     pub errors: Vec<ParserError>,
+    pub define_spans: DefineSpanMap,
+    pub label_spans: LabelSpanMap,
+    pub define_references: ReferenceMap,
+    pub label_references: ReferenceMap,
 }
 
 #[derive(Debug, Clone)]
@@ -56,6 +63,8 @@ pub struct Parser {
     pos: usize,
     last_span: Span,
     recovery_mode: bool,
+    define_references: ReferenceMap,
+    label_references: ReferenceMap,
 }
 
 /// Instruction format types for cleaner parsing
@@ -88,6 +97,8 @@ impl Parser {
             pos: 0,
             last_span: Span::new(0, 0),
             recovery_mode: false,
+            define_references: ReferenceMap::new(),
+            label_references: ReferenceMap::new(),
         }
     }
 
@@ -145,6 +156,23 @@ impl Parser {
         }
     }
 
+    fn expect_with_span<T, F>(
+        &self,
+        offset: usize,
+        expected: &str,
+        extractor: F,
+    ) -> Result<(T, Span), ParserError>
+    where
+        F: FnOnce(&Token) -> Option<T>,
+    {
+        match self.peek(offset) {
+            Ok(TokenSpan { token, span }) => extractor(&token)
+                .map(|v| (v, span.clone()))
+                .ok_or_else(|| ParserError::ExpectedButReceived(span, expected.to_string(), token)),
+            Err(e) => Err(ParserError::SyntaxError(e)),
+        }
+    }
+
     fn expect_register(&mut self, offset: usize) -> Result<Register, ParserError> {
         self.expect(offset, "register (r0-r15)", |token| match token {
             Token::Register(r) => Some(*r),
@@ -174,7 +202,7 @@ impl Parser {
     }
 
     fn expect_address(&mut self, offset: usize) -> Result<Address, ParserError> {
-        self.expect(
+        let (address, span) = self.expect_with_span(
             offset,
             "address (number, label, or define)",
             |token| match token {
@@ -183,11 +211,29 @@ impl Parser {
                 Token::Identifier(id) => Some(Address::Define(id.clone())),
                 _ => None,
             },
-        )
+        )?;
+
+        match &address {
+            Address::Label(l) => {
+                self.label_references
+                    .entry(l.clone())
+                    .or_insert_with(Vec::new)
+                    .push(span);
+            }
+            Address::Define(id) => {
+                self.define_references
+                    .entry(id.clone())
+                    .or_insert_with(Vec::new)
+                    .push(span);
+            }
+            Address::Value(_) => {}
+        }
+
+        Ok(address)
     }
 
     fn expect_immediate(&mut self, offset: usize) -> Result<Immediate, ParserError> {
-        self.expect(
+        let (immediate, span) = self.expect_with_span(
             offset,
             "immediate (number or define)",
             |token| match token {
@@ -195,7 +241,17 @@ impl Parser {
                 Token::Identifier(id) => Some(Immediate::Define(id.clone())),
                 _ => None,
             },
-        )
+        )?;
+
+        // Track reference if it's a define
+        if let Immediate::Define(ref id) = immediate {
+            self.define_references
+                .entry(id.clone())
+                .or_insert_with(Vec::new)
+                .push(span);
+        }
+
+        Ok(immediate)
     }
 
     fn try_skip(&mut self, offset: usize) -> Result<Option<SkipFlag>, ParserError> {
@@ -330,6 +386,8 @@ impl Parser {
 
     pub fn parse(mut self) -> ParserResult {
         let mut defines = DefineMap::new();
+        let mut define_spans = DefineSpanMap::new();
+        let mut label_spans = LabelSpanMap::new();
         let mut labels: HashSet<String> = HashSet::new();
         let mut items = Vec::new();
         let mut errors = Vec::new();
@@ -361,19 +419,21 @@ impl Parser {
                             &mut errors,
                         );
                     } else {
-                        items.push(ParsedItem::Label(name, span));
+                        items.push(ParsedItem::Label(name.clone(), span.clone()));
+                        label_spans.insert(name, span);
                     }
                 }
 
                 Ok(TokenSpan {
                     token: Token::Keyword(Keyword::Define),
-                    span,
+                    span: _,
                 }) => match self.parse_define() {
-                    Ok((name, value)) => {
+                    Ok((name, value, name_span)) => {
                         if defines.contains_key(&name) {
-                            errors.push(ParserError::DuplicateDefine(span, name));
+                            errors.push(ParserError::DuplicateDefine(name_span, name));
                         } else {
-                            defines.insert(name, value);
+                            defines.insert(name.clone(), value);
+                            define_spans.insert(name, name_span);
                         }
                     }
                     Err(e) => self.enter_recovery(e, &mut errors),
@@ -410,15 +470,23 @@ impl Parser {
             defines,
             items,
             errors,
+            define_spans,
+            label_spans,
+            define_references: self.define_references,
+            label_references: self.label_references,
         }
     }
 
-    fn parse_define(&mut self) -> Result<(String, f64), ParserError> {
+    fn parse_define(&mut self) -> Result<(String, f64, Span), ParserError> {
         let name = self.expect_identifier(0)?;
+        let name_span = match self.peek(0) {
+            Ok(TokenSpan { span, .. }) => span,
+            Err(e) => return Err(ParserError::SyntaxError(e)),
+        };
         let value = self.expect_number(1)?;
         self.advance()?;
         self.advance()?;
-        Ok((name, value))
+        Ok((name, value, name_span))
     }
 
     fn parse_operation(

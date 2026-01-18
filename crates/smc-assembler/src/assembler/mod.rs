@@ -6,7 +6,8 @@ use crate::{
     assembler::backends::Backend,
     lexer::token::{Condition, Span},
     parser::{
-        DefineMap, ParsedItem, ParserError, ParserResult,
+        DefineMap, DefineSpanMap, LabelSpanMap, ParsedItem, ParserError, ParserResult,
+        ReferenceMap,
         operations::{Address, Immediate, Offset, OperationWithArgs, SpannedOperation},
     },
 };
@@ -56,6 +57,10 @@ pub struct AssemblerResult {
     pub result: Result<Vec<u8>, Vec<AssemblerError>>,
     pub defines: DefineMap,
     pub labels: LabelMap,
+    pub define_spans: DefineSpanMap,
+    pub label_spans: LabelSpanMap,
+    pub define_references: ReferenceMap,
+    pub label_references: ReferenceMap,
 }
 
 impl Assembler {
@@ -112,12 +117,20 @@ impl Assembler {
                 result: Ok(bytes),
                 defines: self.parser_results.defines,
                 labels,
+                define_spans: self.parser_results.define_spans,
+                label_spans: self.parser_results.label_spans,
+                define_references: self.parser_results.define_references,
+                label_references: self.parser_results.label_references,
             }
         } else {
             AssemblerResult {
                 result: Err(errors),
                 defines: self.parser_results.defines,
                 labels,
+                define_spans: self.parser_results.define_spans,
+                label_spans: self.parser_results.label_spans,
+                define_references: self.parser_results.define_references,
+                label_references: self.parser_results.label_references,
             }
         }
     }
